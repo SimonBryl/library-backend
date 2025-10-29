@@ -2,17 +2,8 @@ const express = require("express");
 const router = express.Router();
 const { supabase } = require("../config/supabaseClient");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
-
+const axios = require("axios"); //  místo nodemaileru
 const JWT_SECRET = process.env.JWT_SECRET;
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
 
 // Middleware na ověření tokenu a získání id_user
 function authenticateToken(req, res, next) {
@@ -40,7 +31,7 @@ router.get("/l", authenticateToken, async (req, res) => {
       `)
       .is("real_datum_vraceni", null)
       .is("id_zak", null)
-      .eq("id_user", req.user.id); // <- opraveno z id_user
+      .eq("id_user", req.user.id);
 
     if (error) throw error;
 
@@ -66,81 +57,91 @@ router.put("/:id", authenticateToken, async (req, res) => {
   const today = new Date().toISOString().split("T")[0];
 
   try {
-    // 1) aktualizace Loans
+    // 1️ Aktualizace Loans
     const { error: loanError } = await supabase
       .from("Loans")
       .update({ real_datum_vraceni: today })
       .eq("id_loan", loanId);
-
     if (loanError) throw loanError;
 
-    // 2) zjistit id_kniha
+    // 2️ Získat id_kniha
     const { data: loanData, error: selectError } = await supabase
       .from("Loans")
       .select("id_kniha")
       .eq("id_loan", loanId)
       .single();
-
     if (selectError) throw selectError;
     const bookId = loanData.id_kniha;
 
-    // 3) zjistit název knihy
+    // 3️ Získat název knihy
     const { data: bookData, error: bookSelectError } = await supabase
       .from("Books")
       .select("nazev")
       .eq("id_kniha", bookId)
       .single();
-
     if (bookSelectError) throw bookSelectError;
     const bookName = bookData.nazev;
 
-    // 4) zkontrolovat rezervace na tuto knihu
+    // 4️ Zkontrolovat rezervace na tuto knihu
     const { data: reservations, error: resError } = await supabase
       .from("Reservation")
       .select("id_res, id_user, datum_rezervace, email_send")
       .eq("nazev_knihy", bookName)
       .eq("email_send", false)
       .order("datum_rezervace", { ascending: true });
-
     if (resError) throw resError;
 
     if (reservations && reservations.length > 0) {
-      const chosen = reservations[0]; // první (nejdéle čeká)
+      const chosen = reservations[0];
       const userId = chosen.id_user;
 
-      // 5) zjistit email uživatele
+      // 5️ Získat e-mail uživatele
       const { data: userData, error: userError } = await supabase
         .from("Users")
         .select("email")
         .eq("id_user", userId)
         .single();
-
       if (userError) throw userError;
-
       const email = userData.email;
 
-      // 6) odeslat e-mail 
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "Vaše rezervovaná kniha je k dispozici",
-        text: `Dobrý den, kniha "${bookName}" je nyní k dispozici k vypůjčení.`
-      });
+      // 6️ Odeslat e-mail přes Resend API
+      try {
+        await axios.post(
+          "https://api.resend.com/emails",
+          {
+            from: "Školní knihovna <info@skolniknihovna.cz>",
+            to: email,
+            subject: "Vaše rezervovaná kniha je k dispozici",
+            html: `
+              <p>Dobrý den,</p>
+              <p>Kniha <strong>${bookName}</strong> je nyní k dispozici k vypůjčení.</p>
+              <p>Navštivte knihovnu pro její vyzvednutí.</p>
+            `
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+        console.log(` E-mail o dostupnosti knihy "${bookName}" odeslán na ${email}`);
+      } catch (err) {
+        console.error(" Chyba při odesílání e-mailu:", err.response?.data || err.message);
+      }
 
-      // 7) update Reservation -> email_send = true
+      // 7️ Update Reservation → email_send = true
       const { error: updateResError } = await supabase
         .from("Reservation")
         .update({ email_send: true, id_kniha: bookId })
         .eq("id_res", chosen.id_res);
-
       if (updateResError) throw updateResError;
 
-      // 8) update Books -> stav = rezervace
+      // 8️ Update Books → stav = rezervace
       const { error: bookError } = await supabase
         .from("Books")
         .update({ stav: "rezervace" })
         .eq("id_kniha", bookId);
-
       if (bookError) throw bookError;
     } else {
       // žádná rezervace → stav = kdispozici
@@ -148,7 +149,6 @@ router.put("/:id", authenticateToken, async (req, res) => {
         .from("Books")
         .update({ stav: "kdispozici" })
         .eq("id_kniha", bookId);
-
       if (bookError) throw bookError;
     }
 
