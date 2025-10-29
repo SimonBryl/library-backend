@@ -73,13 +73,13 @@ if (insertError) {
   return res.status(500).json({ message: "Chyba serveru při generování 2FA" });
 }
 
-await transporter.sendMail({
+/*await transporter.sendMail({
   from: process.env.EMAIL_USER,
   to: user.email,
   subject: "Přihlášení – ověřovací kód",
   text: `Váš ověřovací kód je: ${code}`
 });
-
+*/
 return res.json({ twoFA: true, message: "Byl odeslán ověřovací kód na e-mail", token });
 
 
