@@ -14,7 +14,7 @@ async function send2FAEmail(to, code) {
     await axios.post(
       "https://api.resend.com/emails",
       {
-        from: "Školní knihovna <info@skolniknihovna.cz>", // můžeš změnit po ověření domény
+        from: "Školní knihovna <onboarding@resend.dev>", // můžeš změnit po ověření domény
         to,
         subject: "Přihlášení – ověřovací kód",
         html: `
