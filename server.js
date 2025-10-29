@@ -6,7 +6,7 @@ const app = express();
 // 🔧 ruční CORS – funguje 100 % i při preflight OPTIONS
 app.use((req, res, next) => {
   const allowedOrigins = [
-    "https://library-frontend-nine-bay.vercel.app",
+    "https://library-frontend-9reguwcif-simon-bryls-projects.vercel.app/",
     "http://localhost:5500"
   ];
 
