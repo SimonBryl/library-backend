@@ -1,20 +1,20 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
+//const nodemailer = require("nodemailer");
 const { v4: uuidv4 } = require("uuid");
 const router = express.Router();
 const { supabase } = require("../config/supabaseClient");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const transporter = nodemailer.createTransport({
+/*const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-});
+});*/
 
 // LOGIN
 router.post("/login", async (req, res) => {
