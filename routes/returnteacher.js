@@ -109,7 +109,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
         await axios.post(
           "https://api.resend.com/emails",
           {
-            from: "Školní knihovna <info@skolniknihovna.cz>",
+            from: "Školní knihovna <onboarding@resend.dev>",
             to: email,
             subject: "Vaše rezervovaná kniha je k dispozici",
             html: `
