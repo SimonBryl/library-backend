@@ -6,7 +6,8 @@ const app = express();
 
 // CORS – až nasadíš frontend na Vercel, dáš tam jeho doménu
 app.use(cors({
-  origin: "*", // dočasně povolíme všechno, ať máš klid při testu
+  origin: "https://library-frontend-nine-bay.vercel.app/", // dočasně povolíme všechno, ať máš klid při testu
+  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
 
